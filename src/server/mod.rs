@@ -1,32 +1,14 @@
-mod user;
-mod admin;
-mod book;
+mod api;
 
-use user::*;
-use admin::*;
-use book::*;
+use std::mem;
+use api::*;
 
-use std::collections::HashMap;
 use log::info;
 use rusqlite::Connection;
+use std::sync::{Mutex, MutexGuard};
 use warp::Filter;
-use crate::model::*;
 
 const SERVER_README: &str = include_str!("../../server_readme.txt");
-
-macro_rules! endpoint_debug {
-    () => {
-        warp::query::<HashMap<String, String>>()
-            .map(|query: HashMap<String, String>| {
-                log::debug!("Debugging endpoint hit.");
-                let mut result = String::new();
-                for (key, value) in query {
-                    result.push_str(&format!("{}: {}\n", key, value));
-                }
-                result
-            })
-    };
-}
 
 macro_rules! endpoint_post_request {
     ($name:tt, $callback:ident) => {
@@ -49,83 +31,79 @@ macro_rules! endpoint_get_request {
     };
 }
 
-struct Server {
-    database: Connection
+static mut DATABASE_CONNECTION: Option<Mutex<Connection>> = None;
 
+pub fn database() -> MutexGuard<'static, Connection> {
+    unsafe {
+        DATABASE_CONNECTION.as_ref().unwrap().lock().unwrap()
+    }
 }
 
 pub async fn main_server(port: String) {
     env_logger::init();
     info!("Library Management Service by Midnight233, Version {}", env!("CARGO_PKG_VERSION"));
 
+    info!("Connecting to database");
+    unsafe {
+        DATABASE_CONNECTION = Some(Mutex::new(Connection::open("rdb_exp3.db")
+            .expect("Failed to connect to database. Did you run configuration?")));
+    }
+
+    ctrlc::set_handler(move || {
+        info!("Shutting down server");
+        let db = unsafe { DATABASE_CONNECTION.take().unwrap() };
+        db.into_inner().unwrap().close().unwrap();
+        std::process::exit(0);
+    }).expect("Failed to register Ctrl-C handler");
+
+    info!("Starting server on port {}", port);
     let root = warp::path::end()
         .map(move || format!(
             "Library Management Service by Midnight233, Version {}\n\n{}",
             env!("CARGO_PKG_VERSION"), SERVER_README));
 
     let user = {
-        let user = warp::path("user");
         let register = endpoint_post_request!("register", user_register);
         let name_lookup = endpoint_get_request!("name_lookup", user_name_lookup);
         let email_lookup = endpoint_get_request!("email_lookup", user_email_lookup);
-        let alter_name = endpoint_post_request!("alter_name", )
-        user.and(register
+        let alter_name = endpoint_post_request!("alter_name", user_alter_name);
+        let alter_email = endpoint_post_request!("alter_email", user_alter_email);
+        let borrowed = endpoint_get_request!("borrowed", user_borrowed);
+        let unregister = endpoint_post_request!("unregister", user_unregister);
+        let borrow = endpoint_post_request!("borrow", user_borrow);
+        let return_ = endpoint_post_request!("return", user_return);
+        let renew = endpoint_post_request!("renew", user_renew);
+        warp::path("user").and(register
             .or(name_lookup)
-            .or(email_lookup))
+            .or(email_lookup)
+            .or(alter_name)
+            .or(alter_email)
+            .or(borrowed)
+            .or(unregister))
     };
 
     let book = {
-        let book = warp::path("book");
-        let borrow = book
-            .and(warp::path("borrow"))
-            .and(warp::path::end())
-            .and(warp::post())
-            .and(endpoint_debug!());
-        let _return = book
-            .and(warp::path("return"))
-            .and(warp::path::end())
-            .and(warp::post())
-            .and(endpoint_debug!());
-        let renew = book
-            .and(warp::path("renew"))
-            .and(warp::path::end())
-            .and(warp::post())
-            .and(endpoint_debug!());
-        book.and(borrow
-            .or(_return)
-            .or(renew))
+        let search = endpoint_get_request!("search", book_search);
+        let info = endpoint_get_request!("info", book_info);
+        warp::path("book").and(search
+            .or(info))
     };
 
     let admin = {
-        let admin = warp::path("admin");
-        let add = admin
-            .and(warp::path("add"))
-            .and(warp::path::end())
-            .and(warp::post())
-            .and(endpoint_debug!());
-        let delete = admin
-            .and(warp::path("delete"))
-            .and(warp::path::end())
-            .and(warp::post())
-            .and(endpoint_debug!());
-        let modify = admin
-            .and(warp::path("modify"))
-            .and(warp::path::end())
-            .and(warp::post())
-            .and(endpoint_debug!());
-        let search = admin
-            .and(warp::path("search"))
-            .and(warp::path::end())
-            .and(warp::get())
-            .and(endpoint_debug!());
-        admin.and(add
-            .or(delete)
-            .or(modify)
-            .or(search))
+        let add = endpoint_post_request!("add", admin_add);
+        let remove = endpoint_post_request!("remove", admin_remove);
+        let alter = endpoint_post_request!("alter", admin_alter);
+        let alter_copies = endpoint_post_request!("alter_copies", admin_alter_copies);
+        warp::path("admin").and(add
+            .or(remove)
+            .or(alter)
+            .or(alter_copies))
     };
 
     let api = root
-        .or(user);
+        .or(user)
+        .or(book)
+        .or(admin);
 
     warp::serve(api)
         .run(([127, 0, 0, 1], port.parse::<u16>().unwrap()))

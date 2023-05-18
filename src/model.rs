@@ -50,18 +50,6 @@ pub struct ResponseUserAlterName {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestUserAlterPassword {
-    pub uid: u64,
-    pub new_password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseUserAlterPassword {
-    pub success: bool,
-    pub message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestUserAlterEmail {
     pub uid: u64,
     pub new_email: String,
@@ -161,20 +149,7 @@ pub struct ResponseBookRenew {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestAdminRegister {
-    pub username: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseAdminRegister {
-    pub success: bool,
-    pub aid: u64,
-    pub message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookAdd {
-    pub aid: u64,
     pub title: String,
     pub author: String,
     pub description: String,
@@ -190,7 +165,6 @@ pub struct ResponseBookAdd {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookRemove {
-    pub aid: u64,
     pub bid: u64,
 }
 
@@ -202,7 +176,6 @@ pub struct ResponseBookRemove {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookAlter {
-    pub aid: u64,
     pub bid: u64,
     pub title: String,
     pub author: String,
@@ -217,7 +190,6 @@ pub struct ResponseBookAlter {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookAlterCopies {
-    pub aid: u64,
     pub bid: u64,
     pub copies: u64,
 }

@@ -1,10 +1,5 @@
-mod user;
-mod admin;
-mod book;
-
-use user::*;
-use admin::*;
-use book::*;
+mod api;
+use api::*;
 
 use std::collections::HashMap;
 
