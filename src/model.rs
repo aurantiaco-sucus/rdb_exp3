@@ -137,18 +137,6 @@ pub struct ResponseBookReturn {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestBookRenew {
-    pub uid: u64,
-    pub bid: u64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseBookRenew {
-    pub success: bool,
-    pub message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookAdd {
     pub title: String,
     pub author: String,

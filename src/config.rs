@@ -8,9 +8,10 @@ pub async fn main_config(lms_config_overwrite: bool) {
         warn!("Overwriting existing configuration if any");
     }
     config_database(ow);
+    info!("Configuration finished. It's safe to run the server now");
 }
 
-const QUERY_DB_CREATE: &str = include_str!("../src_sql/config_create.sql");
+const QUERY_DB_CREATE: &str = include_str!("../assets/table_init.sql");
 
 fn config_database(ow: bool) {
     if ow && std::path::Path::new("rdb_exp3.db").exists() {

@@ -1,6 +1,5 @@
 mod api;
 
-use std::mem;
 use api::*;
 
 use log::info;
@@ -8,7 +7,7 @@ use rusqlite::Connection;
 use std::sync::{Mutex, MutexGuard};
 use warp::Filter;
 
-const SERVER_README: &str = include_str!("../../server_readme.txt");
+const SERVER_README: &str = include_str!("../../assets/server_readme.txt");
 
 macro_rules! endpoint_post_request {
     ($name:tt, $callback:ident) => {
@@ -49,6 +48,18 @@ pub async fn main_server(port: String) {
             .expect("Failed to connect to database. Did you run configuration?")));
     }
 
+    info!("Checking sanity of database");
+    // check if tables `lms_user`, `lms_book` and `lms_borrow` exist
+    ["lms_user", "lms_book", "lms_borrow"].iter().for_each(|table| {
+        if database().query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            [table],
+            |row| row.get::<_, i64>(0),
+        ).unwrap() != 1 {
+            panic!("Table `{}` does not exist", table);
+        }
+    });
+
     ctrlc::set_handler(move || {
         info!("Shutting down server");
         let db = unsafe { DATABASE_CONNECTION.take().unwrap() };
@@ -72,14 +83,15 @@ pub async fn main_server(port: String) {
         let unregister = endpoint_post_request!("unregister", user_unregister);
         let borrow = endpoint_post_request!("borrow", user_borrow);
         let return_ = endpoint_post_request!("return", user_return);
-        let renew = endpoint_post_request!("renew", user_renew);
         warp::path("user").and(register
             .or(name_lookup)
             .or(email_lookup)
             .or(alter_name)
             .or(alter_email)
             .or(borrowed)
-            .or(unregister))
+            .or(unregister)
+            .or(borrow)
+            .or(return_))
     };
 
     let book = {

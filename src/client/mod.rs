@@ -1,5 +1,4 @@
 mod api;
-use api::*;
 
 use std::collections::HashMap;
 
@@ -38,10 +37,24 @@ impl Client {
     }
 }
 
-fn read_line() -> String {
+pub fn read_line() -> String {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
-    input.trim().to_string()
+    input
+}
+
+pub fn read_string() -> String {
+    let mut input = String::new();
+    let mut lines = Vec::new();
+    loop {
+        std::io::stdin().read_line(&mut input).unwrap();
+        if input.trim() == "" {
+            break;
+        }
+        lines.push(input.to_string());
+        input.clear();
+    }
+    lines.join("\n")
 }
 
 // --- Lines for a request
@@ -60,40 +73,30 @@ pub async fn main_client(host: String, port: String) {
         let function = read_line();
         match category.as_str() {
             "user" => match function.as_str() {
-                "register" => {
-                    let mut query = HashMap::new();
-                    query.insert("username".to_string(), read_line());
-                    query.insert("password".to_string(), read_line());
-                    query.insert("email".to_string(), read_line());
-                    query.insert("phone".to_string(), read_line());
-                    query.insert("address".to_string(), read_line());
-                    println!("{}", client.request(
-                        "user/register".to_string(),
-                        "POST".to_string(),
-                        query
-                    ).await.unwrap());
-                }
-                "search" => {
-                    let mut query = HashMap::new();
-                    query.insert("username".to_string(), read_line());
-                    println!("{}", client.request(
-                        "user/search".to_string(),
-                        "GET".to_string(),
-                        query
-                    ).await.unwrap());
-                }
-                "history" => {
-                    let mut query = HashMap::new();
-                    query.insert("username".to_string(), read_line());
-                    println!("{}", client.request(
-                        "user/history".to_string(),
-                        "GET".to_string(),
-                        query
-                    ).await.unwrap());
-                }
-                _ => panic!("Unknown function: {}", function),
+                "register" => {}
+                "name_lookup" => {}
+                "email_lookup" => {}
+                "alter_name" => {}
+                "alter_email" => {}
+                "borrowed" => {}
+                "unregister" => {}
+                "borrow" => {}
+                "return" => {}
+                _ => println!("unknown function: {}", function),
             },
-            _ => {}
+            "book" => match function.as_str() {
+                "search" => {}
+                "info" => {}
+                _ => println!("unknown function: {}", function),
+            },
+            "admin" => match function.as_str() {
+                "add" => {}
+                "remove" => {}
+                "alter" => {}
+                "alter_copies" => {}
+                _ => println!("unknown function: {}", function),
+            }
+            _ => println!("unknown category: {}", category),
         }
     }
 }
