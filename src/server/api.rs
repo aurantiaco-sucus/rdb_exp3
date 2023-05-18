@@ -7,35 +7,59 @@ In case you forget about it, here is how the tables look like:
 
 create table lms_user (
     uid integer primary key autoincrement,
-    username varchar(512) not null unique,
-    email varchar(512) not null unique
+    username text not null,
+    email text not null,
+    info text not null
 );
+
+create index lms_user_username on lms_user (username);
+create index lms_user_email on lms_user (email);
 
 create table lms_book (
     bid integer primary key autoincrement,
-    title varchar(512) not null unique,
-    author varchar(2048) not null,
-    description varchar(32768) not null,
-    copies int not null,
-    available int not null
+    title text not null,
+    author text not null,
+    info text not null
 );
 
-create table lms_borrow (
-    uid int not null,
-    bid int not null,
-    primary key (uid, bid),
-    foreign key (uid) references lms_user (uid),
+create table lms_instance (
+    iid integer primary key autoincrement,
+    bid integer not null,
     foreign key (bid) references lms_book (bid)
 );
+
+create index lms_instance_bid on lms_instance (bid);
+
+create table lms_occupation (
+    uid integer not null,
+    iid integer not null,
+    date text not null,
+    kind integer not null,
+    foreign key (uid) references lms_user (uid),
+    foreign key (iid) references lms_instance (iid),
+    primary key (uid, iid),
+    check (kind in (0, 1, 2)) -- 0: borrowed, 1: reserved, 2: lost
+);
+
+create index lms_borrow_uid on lms_occupation (uid);
+create index lms_borrow_iid on lms_occupation (iid);
  */
 
 #[inline]
 pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
     info!("user_register IN {:?}", req);
+    if !is_username_legit(&req.username) {
+        info!("user_register ERR username is not legit");
+        return ResponseUserRegister {
+            success: false,
+            uid: 0,
+            message: "username is not legit".to_string(),
+        };
+    }
     let db = database();
     if let Err(err) = db.execute(
-        "INSERT INTO lms_user (username, email) VALUES (?1, ?2)",
-        [&req.username, &req.email],
+        "INSERT INTO lms_user (username, email, info) VALUES (?1, ?2, ?3)",
+        [&req.username, &req.email, &req.info],
     ) {
         info!("user_register ERR {:?}", err);
         ResponseUserRegister {
@@ -44,11 +68,7 @@ pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
             message: format!("{}", err),
         }
     } else {
-        let uid = db.query_row(
-            "SELECT uid FROM lms_user WHERE username = ?1",
-            [&req.username],
-            |row| row.get(0),
-        ).unwrap();
+        let uid = db.last_insert_rowid() as u64;
         info!("user_register OUT {}", uid);
         ResponseUserRegister {
             success: true,
@@ -59,26 +79,35 @@ pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
 }
 
 #[inline]
-pub fn user_name_lookup(req: RequestUserNameLookup) -> ResponseUserNameLookup {
-    info!("user_name_lookup IN {:?}", req);
+pub fn is_username_legit(username: &str) -> bool {
+    username.len() >= 8 &&
+        username.len() <= 128 &&
+        username.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+#[inline]
+pub fn user_lookup(req: RequestUserLookup) -> ResponseUserLookup {
+    info!("user_lookup IN {:?}", req);
     let db = database();
-    let uid = db.query_row(
-        "SELECT uid FROM lms_user WHERE username = ?1",
-        [&req.username],
-        |row| row.get(0),
-    );
+    let (phrase, query) = if req.phrase.starts_with(':') {
+        (&req.phrase[1..], "SELECT uid FROM lms_user WHERE email = ?1")
+    } else {
+        (req.phrase.as_str(), "SELECT uid FROM lms_user WHERE username = ?1")
+    };
+    let uid = db.query_row(query, [phrase], |row| row.get(0));
     match uid {
         Ok(uid) => {
-            info!("user_name_lookup OUT {:?}", uid);
-            ResponseUserNameLookup {
+            info!("user_lookup OUT {:?}", uid);
+            ResponseUserLookup {
                 success: true,
                 uid,
                 message: "success".to_string(),
             }
         }
         Err(err) => {
-            info!("user_name_lookup ERR {:?}", err);
-            ResponseUserNameLookup {
+            info!("user_lookup ERR {:?}", err);
+            ResponseUserLookup {
                 success: false,
                 uid: 0,
                 message: format!("{}", err),
@@ -88,76 +117,30 @@ pub fn user_name_lookup(req: RequestUserNameLookup) -> ResponseUserNameLookup {
 }
 
 #[inline]
-pub fn user_email_lookup(req: RequestUserEmailLookup) -> ResponseUserEmailLookup {
-    info!("user_email_lookup IN {:?}", req);
-    let uid = database().query_row(
-        "SELECT uid FROM lms_user WHERE email = ?1",
-        [&req.email],
-        |row| row.get(0),
-    );
-    match uid {
-        Ok(uid) => {
-            info!("user_email_lookup OUT {:?}", uid);
-            ResponseUserEmailLookup {
-                success: true,
-                uid,
-                message: "success".to_string(),
-            }
-        },
-        Err(err) => {
-            info!("user_email_lookup ERR {:?}", err);
-            ResponseUserEmailLookup {
-                success: false,
-                uid: 0,
-                message: format!("{}", err),
-            }
-        }
+pub fn user_alter(req: RequestUserAlter) -> ResponseUserAlter {
+    info!("user_alter IN {:?}", req);
+    if !is_username_legit(&req.username) {
+        info!("user_alter ERR username is not legit");
+        return ResponseUserAlter {
+            success: false,
+            message: "username is not legit".to_string(),
+        };
     }
-}
-
-#[inline]
-pub fn user_alter_name(req: RequestUserAlterName) -> ResponseUserAlterName {
-    info!("user_alter_name IN {:?}", req);
     let res = database().execute(
-        "UPDATE lms_user SET username = ?1 WHERE uid = ?2",
-        [&req.new_username, &req.uid.to_string()],
+        "UPDATE lms_user SET username = ?1, email = ?2, info = ?3 WHERE uid = ?4",
+        [&req.username, &req.email, &req.info, &req.uid.to_string()],
     );
     match res {
         Ok(_) => {
             info!("user_alter_name OUT {:?}", req);
-            ResponseUserAlterName {
+            ResponseUserAlter {
                 success: true,
                 message: "success".to_string(),
             }
         },
         Err(err) => {
             info!("user_alter_name ERR {:?}", err);
-            ResponseUserAlterName {
-                success: false,
-                message: format!("{}", err),
-            }
-        }
-    }
-}
-
-#[inline]
-pub fn user_alter_email(req: RequestUserAlterEmail) -> ResponseUserAlterEmail {
-    info!("user_alter_email IN {:?}", req);
-    let res = database().execute(
-        "UPDATE lms_user SET email = ?1 WHERE uid = ?2",
-        [&req.new_email, &req.uid.to_string()],
-    );
-    match res {
-        Ok(_) => {
-            info!("user_alter_email OUT {:?}", req);
-            ResponseUserAlterEmail {
-                success: true,
-                message: "success".to_string(),
-            }
-        },
-        Err(err) => {
-            info!("user_alter_email ERR {:?}", err);
-            ResponseUserAlterEmail {
+            ResponseUserAlter {
                 success: false,
                 message: format!("{}", err),
             }
@@ -169,36 +152,63 @@ pub fn user_alter_email(req: RequestUserAlterEmail) -> ResponseUserAlterEmail {
 pub fn user_borrowed(req: RequestUserBorrowed) -> ResponseUserBorrowed {
     info!("user_borrowed IN {:?}", req);
     let db = database();
-    // select bid from borrow where uid = ?1
-    let mut stmt = db
-        .prepare("SELECT bid FROM lms_borrow WHERE uid = ?1")
-        .unwrap();
-    let bids = stmt
-        .query_map([&req.uid.to_string()], |row| {
-            Ok(row.get(0).unwrap())
-        });
-    let bids = match bids {
-        Ok(bids) => bids,
+    let mut stmt = db.prepare(
+        "SELECT iid FROM lms_occupation WHERE uid = ?1 AND kind = 0",
+    ).unwrap();
+    let iid_iter = stmt
+        .query_map(&[&req.uid.to_string()], |row| row.get(0));
+    let iid_iter = match iid_iter {
+        Ok(iid_iter) => iid_iter,
         Err(err) => {
             info!("user_borrowed ERR {:?}", err);
             return ResponseUserBorrowed {
                 success: false,
-                bids: "".to_string(),
                 message: format!("{}", err),
+                iid_list: String::new(),
             };
         }
     };
-    let bids = bids
-        .map(|x| x.unwrap())
-        .collect::<Vec<u64>>()
-        .into_iter()
-        .map(|x| x.to_string())
-        .collect::<Vec<String>>();
-    info!("user_borrowed OUT {:?}", bids);
+    let iid_list = iid_iter
+        .map(|iid: Result<u64, _>| iid.unwrap().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    info!("user_borrowed OUT {:?}", iid_list);
     ResponseUserBorrowed {
         success: true,
-        bids: bids.join(","),
         message: "success".to_string(),
+        iid_list,
+    }
+}
+
+#[inline]
+pub fn user_reserved(req: RequestUserReserved) -> ResponseUserReserved {
+    info!("user_borrowed IN {:?}", req);
+    let db = database();
+    let mut stmt = db.prepare(
+        "SELECT iid FROM lms_occupation WHERE uid = ?1 AND kind = 1",
+    ).unwrap();
+    let iid_iter = stmt
+        .query_map(&[&req.uid.to_string()], |row| row.get(0));
+    let iid_iter = match iid_iter {
+        Ok(iid_iter) => iid_iter,
+        Err(err) => {
+            info!("user_borrowed ERR {:?}", err);
+            return ResponseUserReserved {
+                success: false,
+                message: format!("{}", err),
+                iid_list: String::new(),
+            };
+        }
+    };
+    let iid_list = iid_iter
+        .map(|iid: Result<u64, _>| iid.unwrap().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    info!("user_borrowed OUT {:?}", iid_list);
+    ResponseUserReserved {
+        success: true,
+        message: "success".to_string(),
+        iid_list,
     }
 }
 
@@ -230,9 +240,10 @@ pub fn user_unregister(req: RequestUserUnregister) -> ResponseUserUnregister {
 #[inline]
 pub fn user_borrow(req: RequestBookBorrow) -> ResponseBookBorrow {
     info!("user_borrow IN {:?}", req);
+    let date = chrono::Local::now().date_naive();
     let res = database().execute(
-        "INSERT INTO lms_borrow (uid, bid) VALUES (?1, ?2)",
-        [&req.uid.to_string(), &req.bid.to_string()],
+        "INSERT INTO lms_borrow (uid, iid, date, kind) VALUES (?1, ?2, ?3, 0)",
+        [&req.uid.to_string(), &req.iid.to_string(), &date.to_string()],
     );
     match res {
         Ok(_) => {
@@ -255,9 +266,10 @@ pub fn user_borrow(req: RequestBookBorrow) -> ResponseBookBorrow {
 #[inline]
 pub fn user_return(req: RequestBookReturn) -> ResponseBookReturn {
     info!("user_return IN {:?}", req);
+    let date = chrono::Local::now().date_naive();
     let res = database().execute(
-        "DELETE FROM lms_borrow WHERE uid = ?1 AND bid = ?2",
-        [&req.uid.to_string(), &req.bid.to_string()],
+        "DELETE FROM lms_borrow WHERE uid = ?1 AND iid = ?2",
+        [&req.uid.to_string(), &req.iid.to_string()],
     );
     match res {
         Ok(_) => {

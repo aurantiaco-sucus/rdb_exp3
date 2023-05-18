@@ -1,39 +1,38 @@
 create table lms_user (
     uid integer primary key autoincrement,
-    username varchar(512) not null unique,
-    email varchar(512) not null unique
+    username text not null,
+    email text not null,
+    info text not null
 );
+
+create index lms_user_username on lms_user (username);
+create index lms_user_email on lms_user (email);
 
 create table lms_book (
     bid integer primary key autoincrement,
-    title varchar(512) not null unique,
-    author varchar(2048) not null,
-    description varchar(32768) not null,
-    copies int not null,
-    available int not null
+    title text not null,
+    author text not null,
+    info text not null
 );
 
-create table lms_borrow (
-    uid int not null,
-    bid int not null,
-    primary key (uid, bid),
-    foreign key (uid) references lms_user (uid),
+create table lms_instance (
+    iid integer primary key autoincrement,
+    bid integer not null,
     foreign key (bid) references lms_book (bid)
 );
 
-/* trigger to update available copies of a book and deny borrow if no copies are available */
-create trigger lms_borrow_trigger
-    before insert on lms_borrow
-    for each row
-    when (select available from lms_book where bid = new.bid) = 0
-    begin
-        select raise(abort, 'No copies of this book are available');
-    end;
+create index lms_instance_bid on lms_instance (bid);
 
-/* trigger to update available copies of a book when a book is returned */
-create trigger lms_return_trigger
-    after delete on lms_borrow
-    for each row
-    begin
-        update lms_book set available = available + 1 where bid = old.bid;
-    end;
+create table lms_occupation (
+    uid integer not null,
+    iid integer not null,
+    date text not null,
+    kind integer not null,
+    foreign key (uid) references lms_user (uid),
+    foreign key (iid) references lms_instance (iid),
+    primary key (uid, iid),
+    check (kind in (0, 1, 2)) -- 0: borrowed, 1: reserved, 2: lost
+);
+
+create index lms_borrow_uid on lms_occupation (uid);
+create index lms_borrow_iid on lms_occupation (iid);

@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 pub struct RequestUserRegister {
     pub username: String,
     pub email: String,
+    pub info: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -14,49 +15,41 @@ pub struct ResponseUserRegister {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestUserNameLookup {
+pub struct RequestUserLookup {
+    pub phrase: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseUserLookup {
+    pub success: bool,
+    pub uid: u64,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestUserInfo {
+    pub uid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseUserInfo {
+    pub success: bool,
+    pub message: String,
     pub username: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseUserNameLookup {
-    pub success: bool,
-    pub uid: u64,
-    pub message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestUserEmailLookup {
     pub email: String,
+    pub info: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseUserEmailLookup {
-    pub success: bool,
+pub struct RequestUserAlter {
     pub uid: u64,
-    pub message: String,
+    pub username: String,
+    pub email: String,
+    pub info: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestUserAlterName {
-    pub uid: u64,
-    pub new_username: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseUserAlterName {
-    pub success: bool,
-    pub message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestUserAlterEmail {
-    pub uid: u64,
-    pub new_email: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseUserAlterEmail {
+pub struct ResponseUserAlter {
     pub success: bool,
     pub message: String,
 }
@@ -70,7 +63,19 @@ pub struct RequestUserBorrowed {
 pub struct ResponseUserBorrowed {
     pub success: bool,
     pub message: String,
-    pub bids: String,
+    pub iid_list: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestUserReserved {
+    pub uid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseUserReserved {
+    pub success: bool,
+    pub message: String,
+    pub iid_list: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -93,7 +98,7 @@ pub struct RequestBookSearch {
 pub struct ResponseBookSearch {
     pub success: bool,
     pub message: String,
-    pub bids: String,
+    pub bid_list: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -107,15 +112,25 @@ pub struct ResponseBookInfo {
     pub message: String, 
     pub title: String,
     pub author: String,
-    pub description: String,
-    pub copies: u64,
-    pub available: u64,
+    pub info: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestBookInstance {
+    pub bid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseBookInstance {
+    pub success: bool,
+    pub message: String,
+    pub iid_list: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookBorrow {
     pub uid: u64,
-    pub bid: u64,
+    pub iid: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -125,9 +140,21 @@ pub struct ResponseBookBorrow {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestBookReserve {
+    pub uid: u64,
+    pub iid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseBookReserve {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookReturn {
     pub uid: u64,
-    pub bid: u64,
+    pub iid: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -140,8 +167,7 @@ pub struct ResponseBookReturn {
 pub struct RequestBookAdd {
     pub title: String,
     pub author: String,
-    pub description: String,
-    pub copies: u64,
+    pub info: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -167,7 +193,7 @@ pub struct RequestBookAlter {
     pub bid: u64,
     pub title: String,
     pub author: String,
-    pub description: String,
+    pub info: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -177,13 +203,24 @@ pub struct ResponseBookAlter {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct RequestBookAlterCopies {
+pub struct RequestBookAddInstance {
     pub bid: u64,
     pub copies: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct ResponseBookAlterCopies {
+pub struct ResponseBookAddInstance {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestBookRemoveInstance {
+    pub iid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseBookRemoveInstance {
     pub success: bool,
     pub message: String,
 }
