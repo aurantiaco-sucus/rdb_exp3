@@ -2,49 +2,6 @@ use log::{info};
 use crate::model::*;
 use crate::server::database;
 
-/*
-In case you forget about it, here is how the tables look like:
-
-create table lms_user (
-    uid integer primary key autoincrement,
-    username text not null,
-    email text not null,
-    info text not null
-);
-
-create index lms_user_username on lms_user (username);
-create index lms_user_email on lms_user (email);
-
-create table lms_book (
-    bid integer primary key autoincrement,
-    title text not null,
-    author text not null,
-    info text not null
-);
-
-create table lms_instance (
-    iid integer primary key autoincrement,
-    bid integer not null,
-    foreign key (bid) references lms_book (bid)
-);
-
-create index lms_instance_bid on lms_instance (bid);
-
-create table lms_occupation (
-    uid integer not null,
-    iid integer not null,
-    date text not null,
-    kind integer not null,
-    foreign key (uid) references lms_user (uid),
-    foreign key (iid) references lms_instance (iid),
-    primary key (uid, iid),
-    check (kind in (0, 1, 2)) -- 0: borrowed, 1: reserved, 2: lost
-);
-
-create index lms_borrow_uid on lms_occupation (uid);
-create index lms_borrow_iid on lms_occupation (iid);
- */
-
 #[inline]
 pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
     info!("user_register IN {:?}", req);
@@ -240,10 +197,9 @@ pub fn user_unregister(req: RequestUserUnregister) -> ResponseUserUnregister {
 #[inline]
 pub fn user_borrow(req: RequestBookBorrow) -> ResponseBookBorrow {
     info!("user_borrow IN {:?}", req);
-    let date = chrono::Local::now().date_naive();
     let res = database().execute(
-        "INSERT INTO lms_borrow (uid, iid, date, kind) VALUES (?1, ?2, ?3, 0)",
-        [&req.uid.to_string(), &req.iid.to_string(), &date.to_string()],
+        "INSERT INTO lms_occupation (uid, iid, date, kind) VALUES (?1, ?2, date('now'), 0)",
+        [&req.uid.to_string(), &req.iid.to_string()],
     );
     match res {
         Ok(_) => {
@@ -266,10 +222,9 @@ pub fn user_borrow(req: RequestBookBorrow) -> ResponseBookBorrow {
 #[inline]
 pub fn user_return(req: RequestBookReturn) -> ResponseBookReturn {
     info!("user_return IN {:?}", req);
-    let date = chrono::Local::now().date_naive();
     let res = database().execute(
-        "DELETE FROM lms_borrow WHERE uid = ?1 AND iid = ?2",
-        [&req.uid.to_string(), &req.iid.to_string()],
+        "DELETE FROM lms_occupation WHERE iid = ?2",
+        [&req.iid.to_string()],
     );
     match res {
         Ok(_) => {
@@ -292,44 +247,27 @@ pub fn user_return(req: RequestBookReturn) -> ResponseBookReturn {
 #[inline]
 pub fn admin_add(req: RequestBookAdd) -> ResponseBookAdd {
     info!("admin_add IN {:?}", req);
-    // title, author, description and copies
-    let res = database().execute(
-        "INSERT INTO lms_book (title, author, description, copies) VALUES (?1, ?2, ?3, ?4)",
-        [&req.title, &req.author, &req.description, &req.copies.to_string()],
+    let db = database();
+    let res = db.execute(
+        "INSERT INTO lms_book (title, author, info) VALUES (?1, ?2, ?3)",
+        [&req.title, &req.author, &req.info],
     );
     match res {
         Ok(_) => {
-            let bid = database().query_row(
-                "SELECT bid FROM lms_book WHERE title = ?1",
-                [&req.title],
-                |row| {
-                    Ok(row.get(0).unwrap())
-                }
-            );
-            let bid = match bid {
-                Ok(bid) => bid,
-                Err(err) => {
-                    info!("admin_add ERR {:?}", err);
-                    return ResponseBookAdd {
-                        success: false,
-                        message: format!("{}", err),
-                        bid: 0,
-                    };
-                }
-            };
+            let bid = db.last_insert_rowid() as u64;
             info!("admin_add OUT {:?}", req);
             ResponseBookAdd {
                 success: true,
-                message: "success".to_string(),
                 bid,
+                message: "success".to_string(),
             }
         },
         Err(err) => {
             info!("admin_add ERR {:?}", err);
             ResponseBookAdd {
                 success: false,
-                message: format!("{}", err),
                 bid: 0,
+                message: format!("{}", err),
             }
         }
     }
@@ -364,8 +302,8 @@ pub fn admin_remove(req: RequestBookRemove) -> ResponseBookRemove {
 pub fn admin_alter(req: RequestBookAlter) -> ResponseBookAlter {
     info!("admin_alter IN {:?}", req);
     let res = database().execute(
-        "UPDATE lms_book SET title = ?1, author = ?2, description = ?3 WHERE bid = ?5",
-        [&req.title, &req.author, &req.description, &req.bid.to_string()],
+        "UPDATE lms_book SET title = ?1, author = ?2, info = ?3 WHERE bid = ?5",
+        [&req.title, &req.author, &req.info, &req.bid.to_string()],
     );
     match res {
         Ok(_) => {
@@ -386,31 +324,6 @@ pub fn admin_alter(req: RequestBookAlter) -> ResponseBookAlter {
 }
 
 #[inline]
-pub fn admin_alter_copies(req: RequestBookAlterCopies) -> ResponseBookAlterCopies {
-    info!("admin_alter_copies IN {:?}", req);
-    let res = database().execute(
-        "UPDATE lms_book SET copies = ?1 WHERE bid = ?2",
-        [&req.copies.to_string(), &req.bid.to_string()],
-    );
-    match res {
-        Ok(_) => {
-            info!("admin_alter_copies OUT {:?}", req);
-            ResponseBookAlterCopies {
-                success: true,
-                message: "success".to_string(),
-            }
-        },
-        Err(err) => {
-            info!("admin_alter_copies ERR {:?}", err);
-            ResponseBookAlterCopies {
-                success: false,
-                message: format!("{}", err),
-            }
-        }
-    }
-}
-
-#[inline]
 pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
     info!("book_search IN {:?}", req);
     let db = database();
@@ -418,7 +331,7 @@ pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
         "SELECT bid FROM lms_book WHERE \
         title LIKE '%?1%' OR \
         author LIKE '%?1%' OR \
-        description LIKE '%?1%'",
+        info LIKE '%?1%'",
     ).unwrap();
     let bids = stmt.query_map(
         [&req.phrase],
@@ -433,7 +346,7 @@ pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
             return ResponseBookSearch {
                 success: false,
                 message: format!("{}", err),
-                bids: String::new(),
+                bid_list: String::new(),
             };
         }
     };
@@ -444,7 +357,7 @@ pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
     ResponseBookSearch {
         success: true,
         message: "success".to_string(),
-        bids: bids.join(","),
+        bid_list: bids.join(","),
     }
 }
 
@@ -452,15 +365,13 @@ pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
 pub fn book_info(req: RequestBookInfo) -> ResponseBookInfo {
     info!("book_info IN {:?}", req);
     let res = database().query_row(
-        "SELECT title, author, description, copies, available FROM lms_book WHERE bid = ?1",
+        "SELECT title, author, info FROM lms_book WHERE bid = ?1",
         [&req.bid.to_string()],
         |row| {
             Ok((
                 row.get(0).unwrap(),
                 row.get(1).unwrap(),
                 row.get(2).unwrap(),
-                row.get(3).unwrap(),
-                row.get(4).unwrap(),
             ))
         }
     );
@@ -473,9 +384,7 @@ pub fn book_info(req: RequestBookInfo) -> ResponseBookInfo {
                 message: format!("{}", err),
                 title: String::new(),
                 author: String::new(),
-                description: String::new(),
-                copies: 0,
-                available: 0,
+                info: String::new(),
             };
         }
     };
@@ -485,8 +394,188 @@ pub fn book_info(req: RequestBookInfo) -> ResponseBookInfo {
         message: "success".to_string(),
         title: res.0,
         author: res.1,
-        description: res.2,
-        copies: res.3,
-        available: res.4,
+        info: res.2,
+    }
+}
+
+#[inline]
+pub fn book_instance(req: RequestBookInstance) -> ResponseBookInstance {
+    info!("book_instance IN {:?}", req);
+    let db = database();
+    let mut stmt = db
+        .prepare("SELECT iid FROM lms_instance WHERE bid = ?1")
+        .unwrap();
+    let iids = stmt.query_map(
+        [&req.bid.to_string()],
+        |row| {
+            Ok(row.get(0).unwrap())
+        });
+    let iids = match iids {
+        Ok(iids) => iids,
+        Err(err) => {
+            info!("book_instance ERR {:?}", err);
+            return ResponseBookInstance {
+                success: false,
+                message: format!("{}", err),
+                iid_list: String::new(),
+            };
+        }
+    };
+    let iids = iids
+        .map(|iid| iid.unwrap())
+        .collect::<Vec<String>>();
+    info!("book_instance OUT {:?}", req);
+    ResponseBookInstance {
+        success: true,
+        message: "success".to_string(),
+        iid_list: iids.join(","),
+    }
+}
+
+#[inline]
+pub fn admin_add_instance(req: RequestBookAddInstance) -> ResponseBookAddInstance {
+    info!("admin_add_instance IN {:?}", req);
+    let db = database();
+    let res = db.execute(
+        "INSERT INTO lms_instance (bid, status) VALUES (?1, ?2)",
+        [&req.bid.to_string(), &req.status.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_add_instance OUT {:?}", req);
+            ResponseBookAddInstance {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_add_instance ERR {:?}", err);
+            ResponseBookAddInstance {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_remove_instance(req: RequestBookRemoveInstance) -> ResponseBookRemoveInstance {
+    info!("admin_remove_instance IN {:?}", req);
+    let res = database().execute(
+        "DELETE FROM lms_instance WHERE iid = ?1",
+        [&req.iid.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_remove_instance OUT {:?}", req);
+            ResponseBookRemoveInstance {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_remove_instance ERR {:?}", err);
+            ResponseBookRemoveInstance {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn user_reserve(req: RequestBookReserve) -> ResponseBookReserve {
+    info!("user_reserve IN {:?}", req);
+    let db = database();
+    let res = db.execute(
+        "INSERT INTO lms_occupation (uid, iid, date, kind) VALUES (?1, ?2, date('now'), ?3)",
+        [&req.uid.to_string(), &req.iid.to_string(), &1.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("user_reserve OUT {:?}", req);
+            ResponseBookReserve {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("user_reserve ERR {:?}", err);
+            ResponseBookReserve {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceInfo {
+    info!("book_instance_info IN {:?}", req);
+    let res = database().query_row(
+        "SELECT bid, status FROM lms_instance WHERE iid = ?1",
+        [&req.iid.to_string()],
+        |row| {
+            Ok((
+                row.get(0).unwrap(),
+                row.get(1).unwrap(),
+            ))
+        }
+    );
+    let res = match res {
+        Ok(res) => res,
+        Err(err) => {
+            info!("book_instance_info ERR {:?}", err);
+            return ResponseBookInstanceInfo {
+                success: false,
+                message: format!("{}", err),
+                bid: 0,
+                status: 0,
+            };
+        }
+    };
+    info!("book_instance_info OUT {:?}", req);
+    ResponseBookInstanceInfo {
+        success: true,
+        message: "success".to_string(),
+        bid: res.0,
+        status: res.1,
+    }
+}
+
+#[inline]
+pub fn user_info(req: RequestUserInfo) -> ResponseUserInfo {
+    info!("user_info IN {:?}", req);
+    let res = database().query_row(
+        "SELECT username, email, info FROM lms_user WHERE uid = ?1",
+        [&req.uid.to_string()],
+        |row| {
+            Ok((
+                row.get(0).unwrap(),
+                row.get(1).unwrap(),
+                row.get(2).unwrap(),
+            ))
+        }
+    );
+    let res = match res {
+        Ok(res) => res,
+        Err(err) => {
+            info!("user_info ERR {:?}", err);
+            return ResponseUserInfo {
+                success: false,
+                message: format!("{}", err),
+                username: String::new(),
+                email: String::new(),
+                info: String::new(),
+            };
+        }
+    };
+    info!("user_info OUT {:?}", req);
+    ResponseUserInfo {
+        success: true,
+        message: "success".to_string(),
+        username: res.0,
+        email: res.1,
+        info: res.2,
     }
 }

@@ -153,7 +153,6 @@ pub struct ResponseBookReserve {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookReturn {
-    pub uid: u64,
     pub iid: u64,
 }
 
@@ -205,7 +204,7 @@ pub struct ResponseBookAlter {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookAddInstance {
     pub bid: u64,
-    pub copies: u64,
+    pub status: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -223,4 +222,17 @@ pub struct RequestBookRemoveInstance {
 pub struct ResponseBookRemoveInstance {
     pub success: bool,
     pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestBookInstanceInfo {
+    pub iid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseBookInstanceInfo {
+    pub success: bool,
+    pub message: String,
+    pub bid: u64,
+    pub status: u64,
 }

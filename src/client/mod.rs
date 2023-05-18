@@ -2,7 +2,7 @@ mod api;
 
 use std::collections::HashMap;
 
-struct Client {
+pub struct Client {
     host: String,
     port: String,
     client: reqwest::Client,
@@ -74,26 +74,29 @@ pub async fn main_client(host: String, port: String) {
         match category.as_str() {
             "user" => match function.as_str() {
                 "register" => {}
-                "name_lookup" => {}
-                "email_lookup" => {}
-                "alter_name" => {}
-                "alter_email" => {}
+                "lookup" => {}
+                "alter" => {}
                 "borrowed" => {}
+                "reserved" => {}
                 "unregister" => {}
                 "borrow" => {}
+                "reserve" => {}
                 "return" => {}
                 _ => println!("unknown function: {}", function),
             },
             "book" => match function.as_str() {
                 "search" => {}
                 "info" => {}
+                "instance" => {}
+                "instance_info" => {}
                 _ => println!("unknown function: {}", function),
             },
             "admin" => match function.as_str() {
                 "add" => {}
                 "remove" => {}
                 "alter" => {}
-                "alter_copies" => {}
+                "add_instance" => {}
+                "remove_instance" => {}
                 _ => println!("unknown function: {}", function),
             }
             _ => println!("unknown category: {}", category),

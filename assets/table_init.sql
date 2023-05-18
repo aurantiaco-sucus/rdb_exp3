@@ -36,3 +36,25 @@ create table lms_occupation (
 
 create index lms_borrow_uid on lms_occupation (uid);
 create index lms_borrow_iid on lms_occupation (iid);
+
+create table lms_history (
+    uid integer not null,
+    iid integer not null,
+    date text not null,
+    return_date text not null,
+    foreign key (uid) references lms_user (uid),
+    foreign key (iid) references lms_instance (iid)
+);
+
+create index lms_history_uid on lms_history (uid);
+create index lms_history_iid on lms_history (iid);
+create index lms_history_date on lms_history (date);
+create index lms_history_return_date on lms_history (return_date);
+
+create trigger lms_occupation_remove
+    after delete on lms_occupation
+    when old.kind = 0
+    begin
+        insert into lms_history (uid, iid, date, return_date)
+        values (old.uid, old.iid, old.date, date('now'));
+    end;

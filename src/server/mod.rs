@@ -49,16 +49,16 @@ pub async fn main_server(port: String) {
     }
 
     info!("Checking sanity of database");
-    // check if tables `lms_user`, `lms_book` and `lms_borrow` exist
-    ["lms_user", "lms_book", "lms_borrow"].iter().for_each(|table| {
-        if database().query_row(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
-            [table],
-            |row| row.get::<_, i64>(0),
-        ).unwrap() != 1 {
-            panic!("Table `{}` does not exist", table);
-        }
-    });
+    ["lms_user", "lms_book", "lms_instance", "lms_occupation", "lms_history"].iter()
+        .for_each(|table| {
+            if database().query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                [table],
+                |row| row.get::<_, i64>(0),
+            ).unwrap() != 1 {
+                panic!("Table `{}` does not exist", table);
+            }
+        });
 
     ctrlc::set_handler(move || {
         info!("Shutting down server");
@@ -75,41 +75,49 @@ pub async fn main_server(port: String) {
 
     let user = {
         let register = endpoint_post_request!("register", user_register);
-        let name_lookup = endpoint_get_request!("name_lookup", user_name_lookup);
-        let email_lookup = endpoint_get_request!("email_lookup", user_email_lookup);
-        let alter_name = endpoint_post_request!("alter_name", user_alter_name);
-        let alter_email = endpoint_post_request!("alter_email", user_alter_email);
         let borrowed = endpoint_get_request!("borrowed", user_borrowed);
         let unregister = endpoint_post_request!("unregister", user_unregister);
         let borrow = endpoint_post_request!("borrow", user_borrow);
         let return_ = endpoint_post_request!("return", user_return);
+        let lookup = endpoint_get_request!("lookup", user_lookup);
+        let alter = endpoint_post_request!("alter", user_alter);
+        let reserve = endpoint_post_request!("reserve", user_reserve);
+        let reserved = endpoint_get_request!("reserved", user_reserved);
+        let info = endpoint_get_request!("info", user_info);
         warp::path("user").and(register
-            .or(name_lookup)
-            .or(email_lookup)
-            .or(alter_name)
-            .or(alter_email)
             .or(borrowed)
             .or(unregister)
             .or(borrow)
-            .or(return_))
+            .or(return_)
+            .or(lookup)
+            .or(alter)
+            .or(reserve)
+            .or(reserved)
+            .or(info))
     };
 
     let book = {
         let search = endpoint_get_request!("search", book_search);
         let info = endpoint_get_request!("info", book_info);
+        let instance = endpoint_get_request!("instance", book_instance);
+        let instance_info = endpoint_get_request!("instance_info", book_instance_info);
         warp::path("book").and(search
-            .or(info))
+            .or(info)
+            .or(instance)
+            .or(instance_info))
     };
 
     let admin = {
         let add = endpoint_post_request!("add", admin_add);
         let remove = endpoint_post_request!("remove", admin_remove);
         let alter = endpoint_post_request!("alter", admin_alter);
-        let alter_copies = endpoint_post_request!("alter_copies", admin_alter_copies);
+        let add_instance = endpoint_post_request!("add_instance", admin_add_instance);
+        let remove_instance = endpoint_post_request!("remove_instance", admin_remove_instance);
         warp::path("admin").and(add
             .or(remove)
             .or(alter)
-            .or(alter_copies))
+            .or(add_instance)
+            .or(remove_instance))
     };
 
     let api = root
