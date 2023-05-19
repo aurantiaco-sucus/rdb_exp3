@@ -2,6 +2,7 @@ mod model;
 mod server;
 mod client;
 mod config;
+mod utils;
 
 #[tokio::main]
 async fn main() {

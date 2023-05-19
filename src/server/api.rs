@@ -1,6 +1,7 @@
 use log::{info};
 use crate::model::*;
 use crate::server::database;
+use crate::utils::*;
 
 #[inline]
 pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
@@ -11,6 +12,14 @@ pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
             success: false,
             uid: 0,
             message: "username is not legit".to_string(),
+        };
+    }
+    if !is_email_legit(&req.email) {
+        info!("user_register ERR email is not legit");
+        return ResponseUserRegister {
+            success: false,
+            uid: 0,
+            message: "email is not legit".to_string(),
         };
     }
     let db = database();
@@ -33,14 +42,6 @@ pub fn user_register(req: RequestUserRegister) -> ResponseUserRegister {
             message: "success".to_string(),
         }
     }
-}
-
-#[inline]
-pub fn is_username_legit(username: &str) -> bool {
-    username.len() >= 8 &&
-        username.len() <= 128 &&
-        username.chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 #[inline]
@@ -113,7 +114,7 @@ pub fn user_borrowed(req: RequestUserBorrowed) -> ResponseUserBorrowed {
         "SELECT iid FROM lms_occupation WHERE uid = ?1 AND kind = 0",
     ).unwrap();
     let iid_iter = stmt
-        .query_map(&[&req.uid.to_string()], |row| row.get(0));
+        .query_map([&req.uid.to_string()], |row| row.get(0));
     let iid_iter = match iid_iter {
         Ok(iid_iter) => iid_iter,
         Err(err) => {
@@ -145,7 +146,7 @@ pub fn user_reserved(req: RequestUserReserved) -> ResponseUserReserved {
         "SELECT iid FROM lms_occupation WHERE uid = ?1 AND kind = 1",
     ).unwrap();
     let iid_iter = stmt
-        .query_map(&[&req.uid.to_string()], |row| row.get(0));
+        .query_map([&req.uid.to_string()], |row| row.get(0));
     let iid_iter = match iid_iter {
         Ok(iid_iter) => iid_iter,
         Err(err) => {
@@ -405,13 +406,13 @@ pub fn book_instance(req: RequestBookInstance) -> ResponseBookInstance {
     let mut stmt = db
         .prepare("SELECT iid FROM lms_instance WHERE bid = ?1")
         .unwrap();
-    let iids = stmt.query_map(
+    let iid_list = stmt.query_map(
         [&req.bid.to_string()],
         |row| {
             Ok(row.get(0).unwrap())
         });
-    let iids = match iids {
-        Ok(iids) => iids,
+    let iid_list = match iid_list {
+        Ok(iid_list) => iid_list,
         Err(err) => {
             info!("book_instance ERR {:?}", err);
             return ResponseBookInstance {
@@ -421,14 +422,14 @@ pub fn book_instance(req: RequestBookInstance) -> ResponseBookInstance {
             };
         }
     };
-    let iids = iids
+    let iid_list = iid_list
         .map(|iid| iid.unwrap())
         .collect::<Vec<String>>();
     info!("book_instance OUT {:?}", req);
     ResponseBookInstance {
         success: true,
         message: "success".to_string(),
-        iid_list: iids.join(","),
+        iid_list: iid_list.join(","),
     }
 }
 

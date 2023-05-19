@@ -1,6 +1,8 @@
 mod api;
 
-use std::collections::HashMap;
+use serde::{Serialize};
+use serde::de::DeserializeOwned;
+use crate::client::api::*;
 
 pub struct Client {
     host: String,
@@ -17,44 +19,47 @@ impl Client {
         }
     }
 
-    async fn request(
+    async fn get<const n: usize, ResTy: DeserializeOwned>(
         &self,
-        path: String,
-        method: String,
-        query: HashMap<String, String>
-    ) -> Option<String> {
+        path: &str,
+        query: [(&str, &str); n],
+    ) -> Option<ResTy> {
         let url = format!("http://{}:{}/{}", self.host, self.port, path);
         let client = &self.client;
-        let response = match method.as_str() {
-            "GET" => client.get(&url).query(&query).send().await,
-            "POST" => client.post(&url).form(&query).send().await,
-            _ => panic!("Unknown method: {}", method),
-        };
-        match response {
-            Ok(response) => Some(response.text().await.unwrap()),
-            Err(_) => None,
-        }
+        let response = client
+            .get(&url)
+            .query(query.as_slice())
+            .send().await.ok()?;
+        response.json::<ResTy>().await.ok()
+    }
+
+    async fn post<'a, ReqTy: Serialize, ResTy: DeserializeOwned>(
+        &self,
+        path: &str,
+        req: ReqTy
+    ) -> Option<ResTy> {
+        let url = format!("http://{}:{}/{}", self.host, self.port, path);
+        let client = &self.client;
+        let response = client
+            .post(&url)
+            .json(&req)
+            .send().await.ok()?;
+        response.json::<ResTy>().await.ok()
     }
 }
 
-pub fn read_line() -> String {
+pub fn read_line() -> Option<String> {
     let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-    input
+    std::io::stdin().read_line(&mut input).ok()?;
+    Some(input.trim_end_matches('\n').to_string())
 }
 
-pub fn read_string() -> String {
-    let mut input = String::new();
-    let mut lines = Vec::new();
-    loop {
-        std::io::stdin().read_line(&mut input).unwrap();
-        if input.trim() == "" {
-            break;
-        }
-        lines.push(input.to_string());
-        input.clear();
-    }
-    lines.join("\n")
+pub fn read_string() -> Option<String> {
+    Some(read_line()?
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\r", "\r")
+        .replace("\\\\", "\\"))
 }
 
 // --- Lines for a request
@@ -68,14 +73,12 @@ pub fn read_string() -> String {
 
 pub async fn main_client(host: String, port: String) {
     let client = Client::new(host, port);
-    loop {
-        let category = read_line();
-        let function = read_line();
+    while let (Some(category), Some(function)) = (read_line(), read_line()) {
         match category.as_str() {
             "user" => match function.as_str() {
-                "register" => {}
-                "lookup" => {}
-                "alter" => {}
+                "register" => user_register(&client).await,
+                "lookup" => user_lookup(&client).await,
+                "alter" => user_alter(&client).await,
                 "borrowed" => {}
                 "reserved" => {}
                 "unregister" => {}
