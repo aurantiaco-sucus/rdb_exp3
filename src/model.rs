@@ -211,6 +211,7 @@ pub struct RequestBookAddInstance {
 pub struct ResponseBookAddInstance {
     pub success: bool,
     pub message: String,
+    pub iid: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

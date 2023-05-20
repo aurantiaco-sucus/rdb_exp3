@@ -19,10 +19,10 @@ impl Client {
         }
     }
 
-    async fn get<const n: usize, ResTy: DeserializeOwned>(
+    async fn get<const N: usize, ResTy: DeserializeOwned>(
         &self,
         path: &str,
-        query: [(&str, &str); n],
+        query: [(&str, &str); N],
     ) -> Option<ResTy> {
         let url = format!("http://{}:{}/{}", self.host, self.port, path);
         let client = &self.client;
@@ -62,15 +62,6 @@ pub fn read_string() -> Option<String> {
         .replace("\\\\", "\\"))
 }
 
-// --- Lines for a request
-// category
-// function
-// --- For each argument
-// value count of lines
-// --- For each line
-// line content
-// --- Input accepted after all values are inputted
-
 pub async fn main_client(host: String, port: String) {
     let client = Client::new(host, port);
     while let (Some(category), Some(function)) = (read_line(), read_line()) {
@@ -79,27 +70,28 @@ pub async fn main_client(host: String, port: String) {
                 "register" => user_register(&client).await,
                 "lookup" => user_lookup(&client).await,
                 "alter" => user_alter(&client).await,
-                "borrowed" => {}
-                "reserved" => {}
-                "unregister" => {}
-                "borrow" => {}
-                "reserve" => {}
-                "return" => {}
+                "borrowed" => user_borrowed(&client).await,
+                "reserved" => user_reserved(&client).await,
+                "unregister" => user_unregister(&client).await,
+                "borrow" => user_borrow(&client).await,
+                "reserve" => user_reserve(&client).await,
+                "return" => user_return(&client).await,
+                "info" => user_info(&client).await,
                 _ => println!("unknown function: {}", function),
             },
             "book" => match function.as_str() {
-                "search" => {}
-                "info" => {}
-                "instance" => {}
-                "instance_info" => {}
+                "search" => book_search(&client).await,
+                "info" => book_info(&client).await,
+                "instance" => book_instance(&client).await,
+                "instance_info" => book_instance_info(&client).await,
                 _ => println!("unknown function: {}", function),
             },
             "admin" => match function.as_str() {
-                "add" => {}
-                "remove" => {}
-                "alter" => {}
-                "add_instance" => {}
-                "remove_instance" => {}
+                "add" => admin_add(&client).await,
+                "remove" => admin_remove(&client).await,
+                "alter" => admin_alter(&client).await,
+                "add_instance" => admin_add_instance(&client).await,
+                "remove_instance" => admin_remove_instance(&client).await,
                 _ => println!("unknown function: {}", function),
             }
             _ => println!("unknown category: {}", category),

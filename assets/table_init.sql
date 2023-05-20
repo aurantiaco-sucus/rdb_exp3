@@ -24,14 +24,13 @@ create table lms_instance (
 create index lms_instance_bid on lms_instance (bid);
 
 create table lms_occupation (
-    uid integer not null,
-    iid integer not null,
+    uid integer,
+    iid integer not null unique,
     date text not null,
     kind integer not null,
     foreign key (uid) references lms_user (uid),
     foreign key (iid) references lms_instance (iid),
-    primary key (uid, iid),
-    check (kind in (0, 1, 2)) -- 0: borrowed, 1: reserved, 2: lost
+    check (kind in (0, 1, 2, 3)) -- 0: borrowed, 1: reserved, 2: maintenance, 3: lost
 );
 
 create index lms_borrow_uid on lms_occupation (uid);

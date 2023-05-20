@@ -246,6 +246,69 @@ pub fn user_return(req: RequestBookReturn) -> ResponseBookReturn {
 }
 
 #[inline]
+pub fn user_reserve(req: RequestBookReserve) -> ResponseBookReserve {
+    info!("user_reserve IN {:?}", req);
+    let db = database();
+    let res = db.execute(
+        "INSERT INTO lms_occupation (uid, iid, date, kind) VALUES (?1, ?2, date('now'), ?3)",
+        [&req.uid.to_string(), &req.iid.to_string(), &1.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("user_reserve OUT {:?}", req);
+            ResponseBookReserve {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("user_reserve ERR {:?}", err);
+            ResponseBookReserve {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn user_info(req: RequestUserInfo) -> ResponseUserInfo {
+    info!("user_info IN {:?}", req);
+    let res = database().query_row(
+        "SELECT username, email, info FROM lms_user WHERE uid = ?1",
+        [&req.uid.to_string()],
+        |row| {
+            Ok((
+                row.get(0).unwrap(),
+                row.get(1).unwrap(),
+                row.get(2).unwrap(),
+            ))
+        }
+    );
+    let res = match res {
+        Ok(res) => res,
+        Err(err) => {
+            info!("user_info ERR {:?}", err);
+            return ResponseUserInfo {
+                success: false,
+                message: format!("{}", err),
+                username: String::new(),
+                email: String::new(),
+                info: String::new(),
+            };
+        }
+    };
+    info!("user_info OUT {:?}", req);
+    ResponseUserInfo {
+        success: true,
+        message: "success".to_string(),
+        username: res.0,
+        email: res.1,
+        info: res.2,
+    }
+}
+
+#[inline]
 pub fn admin_add(req: RequestBookAdd) -> ResponseBookAdd {
     info!("admin_add IN {:?}", req);
     let db = database();
@@ -317,6 +380,60 @@ pub fn admin_alter(req: RequestBookAlter) -> ResponseBookAlter {
         Err(err) => {
             info!("admin_alter ERR {:?}", err);
             ResponseBookAlter {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_add_instance(req: RequestBookAddInstance) -> ResponseBookAddInstance {
+    info!("admin_add_instance IN {:?}", req);
+    let db = database();
+    let res = db.execute(
+        "INSERT INTO lms_instance (bid, status) VALUES (?1, ?2)",
+        [&req.bid.to_string(), &req.status.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            let iid = db.last_insert_rowid() as u64;
+            info!("admin_add_instance OUT {iid}");
+            ResponseBookAddInstance {
+                success: true,
+                message: "success".to_string(),
+                iid,
+            }
+        },
+        Err(err) => {
+            info!("admin_add_instance ERR {:?}", err);
+            ResponseBookAddInstance {
+                success: false,
+                message: format!("{}", err),
+                iid: 0,
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_remove_instance(req: RequestBookRemoveInstance) -> ResponseBookRemoveInstance {
+    info!("admin_remove_instance IN {:?}", req);
+    let res = database().execute(
+        "DELETE FROM lms_instance WHERE iid = ?1",
+        [&req.iid.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_remove_instance OUT {:?}", req);
+            ResponseBookRemoveInstance {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_remove_instance ERR {:?}", err);
+            ResponseBookRemoveInstance {
                 success: false,
                 message: format!("{}", err),
             }
@@ -434,83 +551,6 @@ pub fn book_instance(req: RequestBookInstance) -> ResponseBookInstance {
 }
 
 #[inline]
-pub fn admin_add_instance(req: RequestBookAddInstance) -> ResponseBookAddInstance {
-    info!("admin_add_instance IN {:?}", req);
-    let db = database();
-    let res = db.execute(
-        "INSERT INTO lms_instance (bid, status) VALUES (?1, ?2)",
-        [&req.bid.to_string(), &req.status.to_string()],
-    );
-    match res {
-        Ok(_) => {
-            info!("admin_add_instance OUT {:?}", req);
-            ResponseBookAddInstance {
-                success: true,
-                message: "success".to_string(),
-            }
-        },
-        Err(err) => {
-            info!("admin_add_instance ERR {:?}", err);
-            ResponseBookAddInstance {
-                success: false,
-                message: format!("{}", err),
-            }
-        }
-    }
-}
-
-#[inline]
-pub fn admin_remove_instance(req: RequestBookRemoveInstance) -> ResponseBookRemoveInstance {
-    info!("admin_remove_instance IN {:?}", req);
-    let res = database().execute(
-        "DELETE FROM lms_instance WHERE iid = ?1",
-        [&req.iid.to_string()],
-    );
-    match res {
-        Ok(_) => {
-            info!("admin_remove_instance OUT {:?}", req);
-            ResponseBookRemoveInstance {
-                success: true,
-                message: "success".to_string(),
-            }
-        },
-        Err(err) => {
-            info!("admin_remove_instance ERR {:?}", err);
-            ResponseBookRemoveInstance {
-                success: false,
-                message: format!("{}", err),
-            }
-        }
-    }
-}
-
-#[inline]
-pub fn user_reserve(req: RequestBookReserve) -> ResponseBookReserve {
-    info!("user_reserve IN {:?}", req);
-    let db = database();
-    let res = db.execute(
-        "INSERT INTO lms_occupation (uid, iid, date, kind) VALUES (?1, ?2, date('now'), ?3)",
-        [&req.uid.to_string(), &req.iid.to_string(), &1.to_string()],
-    );
-    match res {
-        Ok(_) => {
-            info!("user_reserve OUT {:?}", req);
-            ResponseBookReserve {
-                success: true,
-                message: "success".to_string(),
-            }
-        },
-        Err(err) => {
-            info!("user_reserve ERR {:?}", err);
-            ResponseBookReserve {
-                success: false,
-                message: format!("{}", err),
-            }
-        }
-    }
-}
-
-#[inline]
 pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceInfo {
     info!("book_instance_info IN {:?}", req);
     let res = database().query_row(
@@ -541,42 +581,5 @@ pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceI
         message: "success".to_string(),
         bid: res.0,
         status: res.1,
-    }
-}
-
-#[inline]
-pub fn user_info(req: RequestUserInfo) -> ResponseUserInfo {
-    info!("user_info IN {:?}", req);
-    let res = database().query_row(
-        "SELECT username, email, info FROM lms_user WHERE uid = ?1",
-        [&req.uid.to_string()],
-        |row| {
-            Ok((
-                row.get(0).unwrap(),
-                row.get(1).unwrap(),
-                row.get(2).unwrap(),
-            ))
-        }
-    );
-    let res = match res {
-        Ok(res) => res,
-        Err(err) => {
-            info!("user_info ERR {:?}", err);
-            return ResponseUserInfo {
-                success: false,
-                message: format!("{}", err),
-                username: String::new(),
-                email: String::new(),
-                info: String::new(),
-            };
-        }
-    };
-    info!("user_info OUT {:?}", req);
-    ResponseUserInfo {
-        success: true,
-        message: "success".to_string(),
-        username: res.0,
-        email: res.1,
-        info: res.2,
     }
 }
