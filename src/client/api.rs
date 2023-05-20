@@ -169,9 +169,10 @@ pub async fn user_reserved(client: &Client) {
 #[inline]
 pub async fn user_unregister(client: &Client) {
     read_u64!(uid);
-    let response = client.get("user/unregister", [
-        ("uid", &uid.to_string()),
-    ]).await;
+    let request = RequestUserUnregister {
+        uid,
+    };
+    let response = client.post("user/unregister", request).await;
     let response: ResponseUserUnregister = match response {
         Some(response) => response,
         None => {
@@ -186,10 +187,11 @@ pub async fn user_unregister(client: &Client) {
 pub async fn user_borrow(client: &Client) {
     read_u64!(uid);
     read_u64!(iid);
-    let response = client.get("user/borrow", [
-        ("uid", &uid.to_string()),
-        ("iid", &iid.to_string()),
-    ]).await;
+    let request = RequestBookBorrow {
+        uid,
+        iid,
+    };
+    let response = client.post("user/borrow", request).await;
     let response: ResponseBookBorrow = match response {
         Some(response) => response,
         None => {
@@ -202,12 +204,11 @@ pub async fn user_borrow(client: &Client) {
 
 #[inline]
 pub async fn user_return(client: &Client) {
-    read_u64!(uid);
     read_u64!(iid);
-    let response = client.get("user/return", [
-        ("uid", &uid.to_string()),
-        ("iid", &iid.to_string()),
-    ]).await;
+    let request = RequestBookReturn {
+        iid,
+    };
+    let response = client.post("user/return", request).await;
     let response: ResponseBookReturn = match response {
         Some(response) => response,
         None => {
@@ -222,10 +223,11 @@ pub async fn user_return(client: &Client) {
 pub async fn user_reserve(client: &Client) {
     read_u64!(uid);
     read_u64!(iid);
-    let response = client.get("user/reserve", [
-        ("uid", &uid.to_string()),
-        ("iid", &iid.to_string()),
-    ]).await;
+    let request = RequestBookReserve {
+        uid,
+        iid,
+    };
+    let response = client.post("user/reserve", request).await;
     let response: ResponseBookReserve = match response {
         Some(response) => response,
         None => {
@@ -286,9 +288,10 @@ pub async fn admin_add(client: &Client) {
 #[inline]
 pub async fn admin_remove(client: &Client) {
     read_u64!(bid);
-    let response = client.get("admin/remove", [
-        ("bid", &bid.to_string()),
-    ]).await;
+    let request = RequestBookRemove {
+        bid,
+    };
+    let response = client.post("admin/remove", request).await;
     let response: ResponseBookRemove = match response {
         Some(response) => response,
         None => {
@@ -296,11 +299,7 @@ pub async fn admin_remove(client: &Client) {
             return;
         }
     };
-    if !response.success {
-        verdict(false, Some(&response.message));
-        return;
-    }
-    verdict(true, None);
+    verdict(response.success, Some(&response.message));
 }
 
 #[inline]
@@ -352,9 +351,11 @@ pub async fn admin_add_instance(client: &Client) {
 #[inline]
 pub async fn admin_remove_instance(client: &Client) {
     read_u64!(iid);
-    let response = client.get("admin/remove_instance", [
-        ("iid", &iid.to_string()),
-    ]).await;
+    let request = RequestBookRemoveInstance {
+        iid,
+    };
+    let response = client
+        .post("admin/remove_instance", request).await;
     let response: ResponseBookRemoveInstance = match response {
         Some(response) => response,
         None => {
@@ -362,11 +363,7 @@ pub async fn admin_remove_instance(client: &Client) {
             return;
         }
     };
-    if !response.success {
-        verdict(false, Some(&response.message));
-        return;
-    }
-    verdict(true, None);
+    verdict(response.success, Some(&response.message));
 }
 
 #[inline]
