@@ -9,7 +9,7 @@ macro_rules! read_arg {
         let $name = match read_string() {
             Some($name) => $name,
             None => {
-                verdict(false, Some(&format!("Failed to read argument: {}", stringify!($name))));
+                verdict_err(&format!("Failed to read argument: {}", stringify!($name)));
                 return;
             }
         };
@@ -23,12 +23,12 @@ macro_rules! read_u64 {
             Some($name) => match $name.parse::<u64>() {
                 Ok($name) => $name,
                 Err(_) => {
-                    verdict(false, Some(&format!("Failed to parse argument: {}", stringify!($name))));
+                    verdict_err(&format!("Failed to parse argument: {}", stringify!($name)));
                     return;
                 }
             },
             None => {
-                verdict(false, Some(&format!("Failed to read argument: {}", stringify!($name))));
+                verdict_err(&format!("Failed to read argument: {}", stringify!($name)));
                 return;
             }
         };
@@ -36,11 +36,14 @@ macro_rules! read_u64 {
 }
 
 #[inline]
-fn verdict(success: bool, message: Option<&str>) {
-    println!("{}", if success { "OK" } else { "ERR" });
-    if let Some(message) = message {
-        println!("{message}");
-    }
+fn verdict_ok() {
+    println!("OK");
+}
+
+#[inline]
+fn verdict_err(message: &str) {
+    println!("ERR");
+    println!("{message}");
 }
 
 #[inline]
@@ -52,12 +55,12 @@ fn value(key: &str, val: impl Display) {
 pub async fn user_register(client: &Client) {
     read_arg!(username);
     if !is_username_legit(&username) {
-        verdict(false, Some("Username is not legit"));
+        verdict_err("Username is not legit");
         return;
     }
     read_arg!(email);
     if !is_email_legit(&email) {
-        verdict(false, Some("Email is not legit"));
+        verdict_err("Email is not legit");
         return;
     }
     read_arg!(info);
@@ -70,13 +73,15 @@ pub async fn user_register(client: &Client) {
     let response: ResponseUserRegister = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
     if response.success {
+        verdict_ok();
         value("uid", response.uid);
+    } else {
+        verdict_err(&response.message);
     }
 }
 
@@ -89,13 +94,15 @@ pub async fn user_lookup(client: &Client) {
     let response: ResponseUserLookup = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
     if response.success {
+        verdict_ok();
         value("uid", response.uid);
+    } else {
+        verdict_err(&response.message);
     }
 }
 
@@ -104,12 +111,12 @@ pub async fn user_alter(client: &Client) {
     read_u64!(uid);
     read_arg!(username);
     if !is_username_legit(&username) {
-        verdict(false, Some("Username is not legit"));
+        verdict_err("Username is not legit");
         return;
     }
     read_arg!(email);
     if !is_email_legit(&email) {
-        verdict(false, Some("Email is not legit"));
+        verdict_err("Email is not legit");
         return;
     }
     read_arg!(info);
@@ -123,11 +130,15 @@ pub async fn user_alter(client: &Client) {
     let response: ResponseUserAlter = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -139,13 +150,17 @@ pub async fn user_borrowed(client: &Client) {
     let response: ResponseUserBorrowed = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
-    let iid_list = response.iid_list;
-    value("iid_list", iid_list.len());
+    if response.success {
+        verdict_ok();
+        let iid_list = response.iid_list;
+        value("iid_list", iid_list.len());
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -157,13 +172,17 @@ pub async fn user_reserved(client: &Client) {
     let response: ResponseUserReserved = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
-    let iid_list = response.iid_list;
-    value("iid_list", iid_list.len());
+    if response.success {
+        verdict_ok();
+        let iid_list = response.iid_list;
+        value("iid_list", iid_list.len());
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -176,11 +195,15 @@ pub async fn user_unregister(client: &Client) {
     let response: ResponseUserUnregister = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -195,11 +218,15 @@ pub async fn user_borrow(client: &Client) {
     let response: ResponseBookBorrow = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -212,11 +239,15 @@ pub async fn user_return(client: &Client) {
     let response: ResponseBookReturn = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -231,11 +262,15 @@ pub async fn user_reserve(client: &Client) {
     let response: ResponseBookReserve = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -247,15 +282,15 @@ pub async fn user_info(client: &Client) {
     let response: ResponseUserInfo = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
     if !response.success {
-        verdict(false, Some(&response.message));
+        verdict_err(&response.message);
         return;
     }
-    verdict(true, None);
+    verdict_ok();
     value("username", response.username);
     value("email", response.email);
     value("info", response.info);
@@ -275,13 +310,15 @@ pub async fn admin_add(client: &Client) {
     let response: ResponseBookAdd = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
     if response.success {
+        verdict_ok();
         value("bid", response.bid);
+    } else {
+        verdict_err(&response.message);
     }
 }
 
@@ -295,11 +332,15 @@ pub async fn admin_remove(client: &Client) {
     let response: ResponseBookRemove = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -318,11 +359,15 @@ pub async fn admin_alter(client: &Client) {
     let response: ResponseBookAlter = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -338,13 +383,15 @@ pub async fn admin_add_instance(client: &Client) {
     let response: ResponseBookAddInstance = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
     if response.success {
+        verdict_ok();
         value("iid", response.iid);
+    } else {
+        verdict_err(&response.message);
     }
 }
 
@@ -359,11 +406,15 @@ pub async fn admin_remove_instance(client: &Client) {
     let response: ResponseBookRemoveInstance = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
-    verdict(response.success, Some(&response.message));
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
 }
 
 #[inline]
@@ -375,15 +426,15 @@ pub async fn book_search(client: &Client) {
     let response: ResponseBookSearch = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
     if !response.success {
-        verdict(false, Some(&response.message));
+        verdict_err(&response.message);
         return;
     }
-    verdict(true, None);
+    verdict_ok();
     value("bid_list", response.bid_list);
 }
 
@@ -396,15 +447,15 @@ pub async fn book_info(client: &Client) {
     let response: ResponseBookInfo = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
     if !response.success {
-        verdict(false, Some(&response.message));
+        verdict_err(&response.message);
         return;
     }
-    verdict(true, None);
+    verdict_ok();
     value("title", response.title);
     value("author", response.author);
     value("info", response.info);
@@ -419,15 +470,15 @@ pub async fn book_instance(client: &Client) {
     let response: ResponseBookInstance = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
     if !response.success {
-        verdict(false, Some(&response.message));
+        verdict_err(&response.message);
         return;
     }
-    verdict(true, None);
+    verdict_ok();
     value("iid_list", response.iid_list);
 }
 
@@ -440,15 +491,15 @@ pub async fn book_instance_info(client: &Client) {
     let response: ResponseBookInstanceInfo = match response {
         Some(response) => response,
         None => {
-            verdict(false, Some("Failed to receive response"));
+            verdict_err("Failed to receive response");
             return;
         }
     };
     if !response.success {
-        verdict(false, Some(&response.message));
+        verdict_err(&response.message);
         return;
     }
-    verdict(true, None);
+    verdict_ok();
     value("bid", response.bid);
     value("status", response.status);
 }
