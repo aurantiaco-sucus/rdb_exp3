@@ -445,14 +445,15 @@ pub fn admin_remove_instance(req: RequestBookRemoveInstance) -> ResponseBookRemo
 pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
     info!("book_search IN {:?}", req);
     let db = database();
-    let mut stmt = db.prepare(
+    let phrase = req.phrase;
+    let mut stmt = db.prepare(&format!(
         "SELECT bid FROM lms_book WHERE \
-        title LIKE '%?1%' OR \
-        author LIKE '%?1%' OR \
-        info LIKE '%?1%'",
-    ).unwrap();
+        title LIKE '%{phrase}%' OR \
+        author LIKE '%{phrase}%' OR \
+        info LIKE '%{phrase}%'",
+    )).unwrap();
     let bids = stmt.query_map(
-        [&req.phrase],
+        [],
         |row| {
             Ok(row.get(0).unwrap())
         }
@@ -471,12 +472,13 @@ pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
     let bids = bids
         .map(|bid| bid.unwrap())
         .collect::<Vec<String>>();
-    info!("book_search OUT {:?}", req);
-    ResponseBookSearch {
+    let response = ResponseBookSearch {
         success: true,
         message: "success".to_string(),
         bid_list: bids.join(","),
-    }
+    };
+    info!("book_search OUT {response:?}");
+    response
 }
 
 #[inline]
@@ -506,14 +508,15 @@ pub fn book_info(req: RequestBookInfo) -> ResponseBookInfo {
             };
         }
     };
-    info!("book_info OUT {:?}", req);
-    ResponseBookInfo {
+    let response = ResponseBookInfo {
         success: true,
         message: "success".to_string(),
         title: res.0,
         author: res.1,
         info: res.2,
-    }
+    };
+    info!("book_info OUT {response:?}");
+    response
 }
 
 #[inline]
@@ -542,12 +545,13 @@ pub fn book_instance(req: RequestBookInstance) -> ResponseBookInstance {
     let iid_list = iid_list
         .map(|iid| iid.unwrap())
         .collect::<Vec<String>>();
-    info!("book_instance OUT {:?}", req);
-    ResponseBookInstance {
+    let response = ResponseBookInstance {
         success: true,
         message: "success".to_string(),
         iid_list: iid_list.join(","),
-    }
+    };
+    info!("book_instance OUT {response:?}");
+    response
 }
 
 #[inline]
@@ -575,11 +579,12 @@ pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceI
             };
         }
     };
-    info!("book_instance_info OUT {:?}", req);
-    ResponseBookInstanceInfo {
+    let response = ResponseBookInstanceInfo {
         success: true,
         message: "success".to_string(),
         bid: res.0,
         status: res.1,
-    }
+    };
+    info!("book_instance_info OUT {:?}", response);
+    response
 }

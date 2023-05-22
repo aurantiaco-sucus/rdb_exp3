@@ -51,7 +51,10 @@ impl Client {
 pub fn read_line() -> Option<String> {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).ok()?;
-    Some(input.trim_end_matches('\n').to_string())
+    Some(input
+        .trim_end_matches("\r\n")
+        .trim_end_matches('\n')
+        .to_string())
 }
 
 pub fn read_string() -> Option<String> {

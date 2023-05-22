@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io::Write;
 use crate::client::{Client, read_string};
 use crate::model::*;
 use crate::utils::*;
@@ -6,6 +7,7 @@ use crate::utils::*;
 macro_rules! read_arg {
     ($name:ident) => {
         println!(stringify!($name));
+        std::io::stdout().flush().unwrap();
         let $name = match read_string() {
             Some($name) => $name,
             None => {
@@ -19,6 +21,7 @@ macro_rules! read_arg {
 macro_rules! read_u64 {
     ($name:ident) => {
         println!(stringify!($name));
+        std::io::stdout().flush().unwrap();
         let $name = match read_string() {
             Some($name) => match $name.parse::<u64>() {
                 Ok($name) => $name,
@@ -38,17 +41,20 @@ macro_rules! read_u64 {
 #[inline]
 fn verdict_ok() {
     println!("OK");
+    std::io::stdout().flush().unwrap();
 }
 
 #[inline]
 fn verdict_err(message: &str) {
     println!("ERR");
     println!("{message}");
+    std::io::stdout().flush().unwrap();
 }
 
 #[inline]
 fn value(key: &str, val: impl Display) {
     println!("{key}={val}");
+    std::io::stdout().flush().unwrap();
 }
 
 #[inline]
