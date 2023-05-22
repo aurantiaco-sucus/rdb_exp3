@@ -442,6 +442,63 @@ pub fn admin_remove_instance(req: RequestBookRemoveInstance) -> ResponseBookRemo
 }
 
 #[inline]
+pub fn admin_occupy_instance(req: RequestInstanceOccupy) -> ResponseInstanceOccupy {
+    info!("admin_occupy_instance IN {:?}", req);
+    if req.status != 2 || req.status != 3 {
+        info!("admin_occupy_instance ERR status must be 2(maintenance) or 3(lost)");
+        return ResponseInstanceOccupy {
+            success: false,
+            message: "status must be 2(maintenance) or 3(lost)".to_string(),
+        };
+    }
+    let res = database().execute(
+        "INSERT INTO lms_occupation (uid, iid, date, kind) VALUES (null, ?1, date('now'), 0)",
+        [&req.iid.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_occupy_instance OUT {:?}", req);
+            ResponseInstanceOccupy {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_occupy_instance ERR {:?}", err);
+            ResponseInstanceOccupy {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_release_instance(req: RequestInstanceRelease) -> ResponseInstanceRelease {
+    info!("admin_release_instance IN {:?}", req);
+    let res = database().execute(
+        "DELETE FROM lms_occupation WHERE iid = ?1",
+        [&req.iid.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_release_instance OUT {:?}", req);
+            ResponseInstanceRelease {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_release_instance ERR {:?}", err);
+            ResponseInstanceRelease {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
 pub fn book_search(req: RequestBookSearch) -> ResponseBookSearch {
     info!("book_search IN {:?}", req);
     let db = database();

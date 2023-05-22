@@ -424,6 +424,56 @@ pub async fn admin_remove_instance(client: &Client) {
 }
 
 #[inline]
+pub async fn admin_occupy_instance(client: &Client) {
+    read_u64!(iid);
+    read_u64!(status);
+    if status != 2 || status != 3 {
+        verdict_err("Invalid status");
+        return;
+    }
+    let request = RequestInstanceOccupy {
+        iid,
+        status,
+    };
+    let response = client
+        .post("admin/occupy_instance", request).await;
+    let response: ResponseInstanceOccupy = match response {
+        Some(response) => response,
+        None => {
+            verdict_err("Failed to receive response");
+            return;
+        }
+    };
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
+}
+
+#[inline]
+pub async fn admin_release_instance(client: &Client) {
+    read_u64!(iid);
+    let request = RequestInstanceRelease {
+        iid,
+    };
+    let response = client
+        .post("admin/release_instance", request).await;
+    let response: ResponseInstanceRelease = match response {
+        Some(response) => response,
+        None => {
+            verdict_err("Failed to receive response");
+            return;
+        }
+    };
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
+}
+
+#[inline]
 pub async fn book_search(client: &Client) {
     read_arg!(phrase);
     let response = client.get("book/search", [

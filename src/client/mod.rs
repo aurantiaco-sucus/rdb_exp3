@@ -65,9 +65,15 @@ pub fn read_string() -> Option<String> {
         .replace("\\\\", "\\"))
 }
 
+fn read_command() -> Option<(String, String)> {
+    let input = read_line()?;
+    let mut iter = input.split_whitespace();
+    Some((iter.next()?.to_string(), iter.next()?.to_string()))
+}
+
 pub async fn main_client(host: String, port: String) {
     let client = Client::new(host, port);
-    while let (Some(category), Some(function)) = (read_line(), read_line()) {
+    while let Some((category, function)) = read_command() {
         match category.as_str() {
             "user" => match function.as_str() {
                 "register" => user_register(&client).await,
@@ -95,6 +101,8 @@ pub async fn main_client(host: String, port: String) {
                 "alter" => admin_alter(&client).await,
                 "add_instance" => admin_add_instance(&client).await,
                 "remove_instance" => admin_remove_instance(&client).await,
+                "occupy_instance" => admin_occupy_instance(&client).await,
+                "release_instance" => admin_release_instance(&client).await,
                 _ => println!("unknown function: {}", function),
             }
             _ => println!("unknown category: {}", category),

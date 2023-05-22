@@ -237,3 +237,26 @@ pub struct ResponseBookInstanceInfo {
     pub bid: u64,
     pub status: u64,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestInstanceOccupy {
+    pub iid: u64,
+    pub status: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseInstanceOccupy {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestInstanceRelease {
+    pub iid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseInstanceRelease {
+    pub success: bool,
+    pub message: String,
+}
