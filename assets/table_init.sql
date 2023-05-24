@@ -1,3 +1,11 @@
+create table lms_metadata(
+    key text primary key,
+    value text not null
+);
+
+insert into lms_metadata (key, value) values ('dbv', '5');
+insert into lms_metadata (key, value) values ('dbv5', 'true');
+
 create table lms_user (
     uid integer primary key autoincrement,
     username text not null,
@@ -15,16 +23,24 @@ create table lms_book (
     info text not null
 );
 
+create table lms_location(
+    lid integer primary key autoincrement,
+    name text not null,
+    info text not null
+);
+
 create table lms_instance (
     iid integer primary key autoincrement,
     bid integer not null,
-    foreign key (bid) references lms_book (bid)
+    lid integer not null,
+    foreign key (bid) references lms_book (bid),
+    foreign key (lid) references lms_location (lid)
 );
 
 create index lms_instance_bid on lms_instance (bid);
 
 create table lms_occupation (
-    uid integer,
+    uid integer default null,
     iid integer not null unique,
     date text not null,
     kind integer not null,

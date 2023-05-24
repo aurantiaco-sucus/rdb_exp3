@@ -204,6 +204,7 @@ pub struct ResponseBookAlter {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RequestBookAddInstance {
     pub bid: u64,
+    pub lid: u64,
     pub status: u64,
 }
 
@@ -235,6 +236,7 @@ pub struct ResponseBookInstanceInfo {
     pub success: bool,
     pub message: String,
     pub bid: u64,
+    pub lid: u64,
     pub status: u64,
 }
 
@@ -257,6 +259,43 @@ pub struct RequestInstanceRelease {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ResponseInstanceRelease {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestLocationAdd {
+    pub name: String,
+    pub info: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseLocationAdd {
+    pub success: bool,
+    pub message: String,
+    pub lid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestLocationRemove {
+    pub lid: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseLocationRemove {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RequestLocationAlter {
+    pub lid: u64,
+    pub name: String,
+    pub info: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ResponseLocationAlter {
     pub success: bool,
     pub message: String,
 }

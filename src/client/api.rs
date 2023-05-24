@@ -379,9 +379,11 @@ pub async fn admin_alter(client: &Client) {
 #[inline]
 pub async fn admin_add_instance(client: &Client) {
     read_u64!(bid);
+    read_u64!(lid);
     read_u64!(status);
     let request = RequestBookAddInstance {
         bid,
+        lid,
         status,
     };
     let response = client
@@ -460,6 +462,79 @@ pub async fn admin_release_instance(client: &Client) {
     let response = client
         .post("admin/release_instance", request).await;
     let response: ResponseInstanceRelease = match response {
+        Some(response) => response,
+        None => {
+            verdict_err("Failed to receive response");
+            return;
+        }
+    };
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
+}
+
+#[inline]
+pub async fn admin_add_location(client: &Client) {
+    read_arg!(name);
+    read_arg!(info);
+    let request = RequestLocationAdd {
+        name,
+        info,
+    };
+    let response = client
+        .post("admin/add_location", request).await;
+    let response: ResponseLocationAdd = match response {
+        Some(response) => response,
+        None => {
+            verdict_err("Failed to receive response");
+            return;
+        }
+    };
+    if response.success {
+        verdict_ok();
+        value("lid", response.lid);
+    } else {
+        verdict_err(&response.message);
+    }
+}
+
+#[inline]
+pub async fn admin_remove_location(client: &Client) {
+    read_u64!(lid);
+    let request = RequestLocationRemove {
+        lid,
+    };
+    let response = client
+        .post("admin/remove_location", request).await;
+    let response: ResponseLocationRemove = match response {
+        Some(response) => response,
+        None => {
+            verdict_err("Failed to receive response");
+            return;
+        }
+    };
+    if response.success {
+        verdict_ok();
+    } else {
+        verdict_err(&response.message);
+    }
+}
+
+#[inline]
+pub async fn admin_alter_location(client: &Client) {
+    read_u64!(lid);
+    read_arg!(name);
+    read_arg!(info);
+    let request = RequestLocationAlter {
+        lid,
+        name,
+        info,
+    };
+    let response = client
+        .post("admin/alter_location", request).await;
+    let response: ResponseLocationAlter = match response {
         Some(response) => response,
         None => {
             verdict_err("Failed to receive response");
@@ -557,5 +632,6 @@ pub async fn book_instance_info(client: &Client) {
     }
     verdict_ok();
     value("bid", response.bid);
+    value("lid", response.lid);
     value("status", response.status);
 }

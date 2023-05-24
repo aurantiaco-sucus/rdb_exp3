@@ -103,6 +103,9 @@ pub async fn main_client(host: String, port: String) {
                 "remove_instance" => admin_remove_instance(&client).await,
                 "occupy_instance" => admin_occupy_instance(&client).await,
                 "release_instance" => admin_release_instance(&client).await,
+                "add_location" => admin_add_location(&client).await,
+                "remove_location" => admin_remove_location(&client).await,
+                "alter_location" => admin_alter_location(&client).await,
                 _ => println!("unknown function: {}", function),
             }
             _ => println!("unknown category: {}", category),

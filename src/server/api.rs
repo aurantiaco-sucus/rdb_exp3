@@ -392,8 +392,8 @@ pub fn admin_add_instance(req: RequestBookAddInstance) -> ResponseBookAddInstanc
     info!("admin_add_instance IN {:?}", req);
     let db = database();
     let res = db.execute(
-        "INSERT INTO lms_instance (bid, status) VALUES (?1, ?2)",
-        [&req.bid.to_string(), &req.status.to_string()],
+        "INSERT INTO lms_instance (bid, status, lid) VALUES (?1, ?2, ?3)",
+        [&req.bid.to_string(), &req.status.to_string(), &req.lid.to_string()],
     );
     match res {
         Ok(_) => {
@@ -491,6 +491,84 @@ pub fn admin_release_instance(req: RequestInstanceRelease) -> ResponseInstanceRe
         Err(err) => {
             info!("admin_release_instance ERR {:?}", err);
             ResponseInstanceRelease {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_add_location(req: RequestLocationAdd) -> ResponseLocationAdd {
+    info!("admin_add_location IN {:?}", req);
+    let res = database().execute(
+        "INSERT INTO lms_location (name, info) VALUES (?1, ?2)",
+        [&req.name, &req.info],
+    );
+    match res {
+        Ok(_) => {
+            let lid = database().last_insert_rowid() as u64;
+            info!("admin_add_location OUT {:?}", req);
+            ResponseLocationAdd {
+                success: true,
+                message: "success".to_string(),
+                lid,
+            }
+        },
+        Err(err) => {
+            info!("admin_add_location ERR {:?}", err);
+            ResponseLocationAdd {
+                success: false,
+                message: format!("{}", err),
+                lid: 0,
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_remove_location(req: RequestLocationRemove) -> ResponseLocationRemove {
+    info!("admin_remove_location IN {:?}", req);
+    let res = database().execute(
+        "DELETE FROM lms_location WHERE lid = ?1",
+        [&req.lid.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_remove_location OUT {:?}", req);
+            ResponseLocationRemove {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_remove_location ERR {:?}", err);
+            ResponseLocationRemove {
+                success: false,
+                message: format!("{}", err),
+            }
+        }
+    }
+}
+
+#[inline]
+pub fn admin_alter_location(req: RequestLocationAlter) -> ResponseLocationAlter {
+    info!("admin_alters_location IN {:?}", req);
+    let res = database().execute(
+        "UPDATE lms_location SET name = ?1, info = ?2 WHERE lid = ?3",
+        [&req.name, &req.info, &req.lid.to_string()],
+    );
+    match res {
+        Ok(_) => {
+            info!("admin_alters_location OUT {:?}", req);
+            ResponseLocationAlter {
+                success: true,
+                message: "success".to_string(),
+            }
+        },
+        Err(err) => {
+            info!("admin_alters_location ERR {:?}", err);
+            ResponseLocationAlter {
                 success: false,
                 message: format!("{}", err),
             }
@@ -615,12 +693,13 @@ pub fn book_instance(req: RequestBookInstance) -> ResponseBookInstance {
 pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceInfo {
     info!("book_instance_info IN {:?}", req);
     let res = database().query_row(
-        "SELECT bid, status FROM lms_instance WHERE iid = ?1",
+        "SELECT bid, status, lid FROM lms_instance WHERE iid = ?1",
         [&req.iid.to_string()],
         |row| {
             Ok((
                 row.get(0).unwrap(),
                 row.get(1).unwrap(),
+                row.get(2).unwrap(),
             ))
         }
     );
@@ -632,6 +711,7 @@ pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceI
                 success: false,
                 message: format!("{}", err),
                 bid: 0,
+                lid: 0,
                 status: 0,
             };
         }
@@ -640,6 +720,7 @@ pub fn book_instance_info(req: RequestBookInstanceInfo) -> ResponseBookInstanceI
         success: true,
         message: "success".to_string(),
         bid: res.0,
+        lid: res.2,
         status: res.1,
     };
     info!("book_instance_info OUT {:?}", response);

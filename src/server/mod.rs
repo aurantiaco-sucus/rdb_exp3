@@ -115,13 +115,19 @@ pub async fn main_server(port: String) {
         let remove_instance = endpoint_post_request!("remove_instance", admin_remove_instance);
         let occupy_instance = endpoint_post_request!("occupy_instance", admin_occupy_instance);
         let release_instance = endpoint_post_request!("release_instance", admin_release_instance);
+        let add_location = endpoint_post_request!("add_location", admin_add_location);
+        let remove_location = endpoint_post_request!("remove_location", admin_remove_location);
+        let alter_location = endpoint_post_request!("alter_location", admin_alter_location);
         warp::path("admin").and(add
             .or(remove)
             .or(alter)
             .or(add_instance)
             .or(remove_instance)
             .or(occupy_instance)
-            .or(release_instance))
+            .or(release_instance)
+            .or(add_location)
+            .or(remove_location)
+            .or(alter_location))
     };
 
     let api = root
